@@ -33,8 +33,20 @@ set -e
 # workaround to allow GitHub Desktop to work, add this (hopefully harmless) setting here.
 export PATH=$PATH:/usr/local/bin
 
+realpathfn() {
+  local -r path="${1}"
+
+  # `realpath` doesn't exist in base MacOSX, so, do shenanigans to simulate
+  if [[ "${OSTYPE}" == "darwin"* ]]; then
+    echo -n "$(cd "$(dirname "${path}")" ; pwd -P)/$(basename "${path}")"
+  else
+    echo -n "$(realpath "${path}")"
+  fi
+}
+
+
 # Take the current working directory to know when to stop walking up the tree
-readonly cwd_abspath="$(realpath "$PWD")"
+readonly cwd_abspath="$(realpathfn "$PWD")"
 
 # https://stackoverflow.com/a/8574392
 # Usage: contains_element "val" "${array[@]}"
@@ -59,13 +71,14 @@ debug() {
   fi
 }
 
+
 # Recursively walk up the tree until the current working directory and check if the changed file is part of a helm
 # chart. Helm charts have a Chart.yaml file.
 chart_path() {
   local -r changed_file="$1"
 
   # We check both the current dir as well as the parent dir, in case the current dir is a file
-  local -r changed_file_abspath="$(realpath "$changed_file")"
+  local -r changed_file_abspath="$(realpathfn "$changed_file")"
   local -r changed_file_dir="$(dirname "$changed_file_abspath")"
 
   debug "Checking directory $changed_file_abspath and $changed_file_dir for Chart.yaml"
